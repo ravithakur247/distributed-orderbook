@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P2P Order Book</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 13px;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            grid-template-rows: auto 1fr auto;
+            min-height: 100vh;
+            gap: 1px;
+            background: #21262d;
+        }
+
+        .header {
+            grid-column: 1/-1;
+            background: #161b22;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid #30363d;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            color: #58a6ff;
+            font-weight: 600;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .badge-peer {
+            background: #1f6feb33;
+            border: 1px solid #1f6feb;
+            color: #58a6ff;
+        }
+
+        .badge-pair {
+            background: #1a7f3733;
+            border: 1px solid #2ea043;
+            color: #3fb950;
+        }
+
+        .stat {
+            color: #7d8590;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        .main {
+            background: #0d1117;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .sidebar {
+            background: #161b22;
+            padding: 16px;
+            border-left: 1px solid #30363d;
+            overflow-y: auto;
+        }
+
+        .footer {
+            grid-column: 1/-1;
+            background: #161b22;
+            padding: 8px 20px;
+            border-top: 1px solid #30363d;
+            color: #7d8590;
+            font-size: 11px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7d8590;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .spread-bar {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .book-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .book-side {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .book-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 70px;
+            padding: 6px 10px;
+            background: #21262d;
+            color: #7d8590;
+            font-size: 11px;
+        }
+
+        .book-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 70px;
+            padding: 4px 10px;
+            position: relative;
+            transition: background 0.15s;
+        }
+
+        .book-row:hover {
+            background: #21262d;
+        }
+
+        .depth-bar {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            opacity: 0.09;
+            pointer-events: none;
+        }
+
+        .ask-row .depth-bar {
+            background: #f85149;
+            left: 0;
+        }
+
+        .bid-row .depth-bar {
+            background: #3fb950;
+            right: 0;
+        }
+
+        .ask-price {
+            color: #f85149;
+            font-weight: 500;
+        }
+
+        .bid-price {
+            color: #3fb950;
+            font-weight: 500;
+        }
+
+        .nr {
+            text-align: right;
+        }
+
+        .dim {
+            color: #7d8590;
+        }
+
+        .peer-tag {
+            text-align: right;
+            font-size: 10px;
+            color: #58a6ff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .peer-tag.me {
+            color: #d29922;
+            font-weight: 700;
+        }
+
+        .trade-table {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .trade-header {
+            display: grid;
+            grid-template-columns: 65px 1fr 1fr 1fr 1fr;
+            padding: 6px 10px;
+            background: #21262d;
+            color: #7d8590;
+            font-size: 11px;
+        }
+
+        .trade-row {
+            display: grid;
+            grid-template-columns: 65px 1fr 1fr 1fr 1fr;
+            padding: 5px 10px;
+            border-bottom: 1px solid #0d1117;
+            font-size: 12px;
+        }
+
+        .trade-row:last-child {
+            border-bottom: none;
+        }
+
+        .trade-row.new-trade {
+            animation: tradeflash 0.8s ease-out;
+        }
+
+        @keyframes tradeflash {
+            0% {
+                background: #1f6feb30
+            }
+
+            100% {
+                background: transparent
+            }
+        }
+
+        .flash {
+            animation: rowflash 0.5s ease-out;
+        }
+
+        @keyframes rowflash {
+            0% {
+                background: #58a6ff18
+            }
+
+            100% {
+                background: transparent
+            }
+        }
+
+        .empty-state {
+            color: #7d8590;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+        }
+
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 7px;
+            border: 1px solid #30363d;
+            background: transparent;
+            color: #7d8590;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .tab.buy {
+            background: #1a7f3733;
+            border-color: #2ea043;
+            color: #3fb950;
+        }
+
+        .tab.sell {
+            background: #da36331a;
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        .type-row {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #30363d;
+            background: transparent;
+            color: #7d8590;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+        }
+
+        .type-btn.active {
+            background: #21262d;
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-label {
+            display: block;
+            color: #7d8590;
+            font-size: 11px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 7px 10px;
+            color: #e6edf3;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .form-input:focus {
+            border-color: #58a6ff;
+        }
+
+        .hint {
+            color: #7d8590;
+            font-size: 11px;
+            margin-bottom: 10px;
+        }
+
+        .hint span {
+            color: #e6edf3;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            transition: opacity 0.15s;
+        }
+
+        .submit-btn.buy {
+            background: #2ea043;
+            color: white;
+        }
+
+        .submit-btn.sell {
+            background: #da3633;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.85;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .fb {
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .fb.ok {
+            color: #3fb950;
+        }
+
+        .fb.err {
+            color: #f85149;
+        }
+
+        .open-order-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px;
+            border-bottom: 1px solid #21262d;
+            font-size: 12px;
+        }
+
+        .open-order-row:last-child {
+            border-bottom: none;
+        }
+
+        .cancel-btn {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid #30363d;
+            color: #7d8590;
+            border-radius: 3px;
+            padding: 2px 7px;
+            cursor: pointer;
+            font-size: 10px;
+            font-family: inherit;
+        }
+
+        .cancel-btn:hover {
+            border-color: #f85149;
+            color: #f85149;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React
+
+        const API_URL = (() => {
+            const p = new URLSearchParams(window.location.search)
+            return p.get('api') || `http://localhost:${window.location.port || 8081}`
+        })()
+
+        const fmt = (n, d = 2) => Number(n).toFixed(d)
+        const shortId = id => id ? id.replace('peer_', 'P') : '—'
+        const hms = ts => ts ? new Date(ts).toLocaleTimeString([], { hour12: false }) : '—'
+
+        function App() {
+            const [book, setBook] = useState(null)
+            const [trades, setTrades] = useState([])    // own state — updated directly
+            const [peerId, setPeerId] = useState(null)
+            const [connected, setConnected] = useState(false)
+
+            const [side, setSide] = useState('buy')
+            const [otype, setOtype] = useState('limit')
+            const [price, setPrice] = useState('')
+            const [qty, setQty] = useState('')
+            const [msg, setMsg] = useState(null)
+            const [loading, setLoading] = useState(false)
+
+            const [flashRows, setFlashRows] = useState({})
+            const [flashTrade, setFlashTrade] = useState(null)
+
+            // ── SSE ──────────────────────────────────────────────
+            useEffect(() => {
+                let es
+                const connect = () => {
+                    es = new EventSource(`${API_URL}/events`)
+                    es.onopen = () => setConnected(true)
+                    es.onerror = () => { setConnected(false); setTimeout(connect, 3000) }
+
+                    es.onmessage = ({ data }) => {
+                        let m
+                        try { m = JSON.parse(data) } catch { return }
+
+                        // ── initial load ──────────────────────────────
+                        if (m.type === 'snapshot') {
+                            setPeerId(m.payload.peerId)
+                            setBook(m.payload)
+                            setTrades(m.payload.trades || [])
+                            return
+                        }
+
+                        // ── trade executed ────────────────────────────
+                        // Because OrderBook now pushes to #trades BEFORE firing the
+                        // onTrade hook, getTrades() inside Peer.js#pushSSE returns
+                        // the array with the new trade already included.
+                        if (m.type === 'trade') {
+                            setBook(m.snapshot)
+                            setTrades(m.trades)            // immediate, no extra event needed
+                            setFlashTrade(m.payload?.id)
+                            setTimeout(() => setFlashTrade(null), 800)
+                            return
+                        }
+
+                        // ── order added / removed ─────────────────────
+                        if (m.type === 'order_added' || m.type === 'order_removed') {
+                            setBook(m.snapshot)
+                            setTrades(m.trades)
+                            const oid = m.payload?.id
+                            if (oid) {
+                                setFlashRows(f => ({ ...f, [oid]: true }))
+                                setTimeout(() => setFlashRows(f => { const n = { ...f }; delete n[oid]; return n }), 500)
+                            }
+                        }
+                    }
+                }
+                connect()
+                return () => es?.close()
+            }, [])
+
+            // ── Submit ───────────────────────────────────────────
+            const submitOrder = async () => {
+                if (!qty || (otype === 'limit' && !price)) return
+                setLoading(true); setMsg(null)
+                try {
+                    const r = await fetch(`${API_URL}/order`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ side, type: otype, price: parseFloat(price), quantity: parseFloat(qty) })
+                    })
+                    const j = await r.json()
+                    if (j.ok) {
+                        setMsg({ ok: true, text: `Submitted! ${j.trades?.length || 0} trade(s) executed.` })
+                        setQty(''); setPrice('')
+                    } else {
+                        setMsg({ ok: false, text: j.error })
+                    }
+                } catch { setMsg({ ok: false, text: 'Could not reach peer' }) }
+                setLoading(false)
+            }
+
+            const cancelOrder = id => fetch(`${API_URL}/order/${id}`, { method: 'DELETE' })
+
+            const myOrders = book ? [
+                ...(book.bids || []).filter(o => o.peerId === peerId),
+                ...(book.asks || []).filter(o => o.peerId === peerId)
+            ] : []
+
+            return (
+                <div className="app">
+
+                    {/* Header */}
+                    <div className="header">
+                        <h1>⚡ P2P Order Book</h1>
+                        {peerId && <span className="badge badge-peer">{peerId}</span>}
+                        {book && <span className="badge badge-pair">{book.pair}</span>}
+                        {book?.bestBid && <span className="stat">Bid: <b style={{ color: '#3fb950' }}>${fmt(book.bestBid.price)}</b></span>}
+                        {book?.bestAsk && <span className="stat">Ask: <b style={{ color: '#f85149' }}>${fmt(book.bestAsk.price)}</b></span>}
+                        {book?.spread != null && <span className="stat">Spread: <b style={{ color: '#d29922' }}>${fmt(book.spread)}</b></span>}
+                        <div className="status-dot" style={{ background: connected ? '#3fb950' : '#f85149' }} title={connected ? 'Connected' : 'Disconnected'} />
+                    </div>
+
+                    {/* Main */}
+                    <div className="main">
+
+                        {book && (
+                            <div className="spread-bar">
+                                <span className="dim">Spread</span>
+                                <span style={{ color: '#d29922', fontWeight: 600 }}>
+                                    {book.spread != null ? `$${fmt(book.spread)}` : '—'}
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="book-container">
+
+                            {/* ASKS — peer column */}
+                            <div className="book-side">
+                                <div className="book-header">
+                                    <span style={{ color: '#f85149' }}>ASKS (Sell)</span>
+                                    <span className="nr">Qty</span>
+                                    <span className="nr">Total</span>
+                                    <span className="nr">Peer</span>
+                                </div>
+                                {book?.asks?.length > 0
+                                    ? [...book.asks].reverse().slice(0, 12).map(o => {
+                                        const maxQ = Math.max(...book.asks.map(x => x.quantity))
+                                        const isMe = o.peerId === peerId
+                                        return (
+                                            <div key={o.id} className={`book-row ask-row ${flashRows[o.id] ? 'flash' : ''}`}>
+                                                <div className="depth-bar" style={{ width: `${(o.quantity / maxQ) * 100}%` }} />
+                                                <span className="ask-price">{fmt(o.price)}</span>
+                                                <span className="nr">{fmt(o.quantity, 4)}</span>
+                                                <span className="nr dim">{fmt(o.price * o.quantity)}</span>
+                                                <span className={`peer-tag${isMe ? ' me' : ''}`}>{isMe ? '★ ' : ''}{shortId(o.peerId)}</span>
+                                            </div>
+                                        )
+                                    })
+                                    : <div className="empty-state">No sell orders</div>
+                                }
+                            </div>
+
+                            {/* BIDS — peer column */}
+                            <div className="book-side">
+                                <div className="book-header">
+                                    <span style={{ color: '#3fb950' }}>BIDS (Buy)</span>
+                                    <span className="nr">Qty</span>
+                                    <span className="nr">Total</span>
+                                    <span className="nr">Peer</span>
+                                </div>
+                                {book?.bids?.length > 0
+                                    ? book.bids.slice(0, 12).map(o => {
+                                        const maxQ = Math.max(...book.bids.map(x => x.quantity))
+                                        const isMe = o.peerId === peerId
+                                        return (
+                                            <div key={o.id} className={`book-row bid-row ${flashRows[o.id] ? 'flash' : ''}`}>
+                                                <div className="depth-bar" style={{ width: `${(o.quantity / maxQ) * 100}%` }} />
+                                                <span className="bid-price">{fmt(o.price)}</span>
+                                                <span className="nr">{fmt(o.quantity, 4)}</span>
+                                                <span className="nr dim">{fmt(o.price * o.quantity)}</span>
+                                                <span className={`peer-tag${isMe ? ' me' : ''}`}>{isMe ? '★ ' : ''}{shortId(o.peerId)}</span>
+                                            </div>
+                                        )
+                                    })
+                                    : <div className="empty-state">No buy orders</div>
+                                }
+                            </div>
+                        </div>
+
+                        {/* Recent Trades — real-time + buyer + seller */}
+                        <div className="section-title" style={{ marginTop: 16 }}>
+                            Recent Trades
+                            {trades.length > 0 && <span style={{ color: '#3fb950', marginLeft: 8, fontWeight: 400, fontSize: 10 }}>({trades.length})</span>}
+                        </div>
+                        <div className="trade-table">
+                            <div className="trade-header">
+                                <span>Time</span>
+                                <span className="nr">Price</span>
+                                <span className="nr">Qty</span>
+                                <span className="nr" style={{ color: '#3fb950' }}>Buyer</span>
+                                <span className="nr" style={{ color: '#f85149' }}>Seller</span>
+                            </div>
+                            {trades.length > 0
+                                ? [...trades].reverse().slice(0, 15).map((t, i) => (
+                                    <div key={t.id || i} className={`trade-row ${t.id === flashTrade ? 'new-trade' : ''}`}>
+                                        <span className="dim" style={{ fontSize: 10 }}>{hms(t.timestamp)}</span>
+                                        <span className="nr" style={{ fontWeight: 600 }}>${fmt(t.price)}</span>
+                                        <span className="nr dim">{fmt(t.quantity, 4)}</span>
+                                        <span className="nr" style={{ color: '#3fb950', fontSize: 11 }}>{shortId(t.buyPeerId)}</span>
+                                        <span className="nr" style={{ color: '#f85149', fontSize: 11 }}>{shortId(t.sellPeerId)}</span>
+                                    </div>
+                                ))
+                                : <div className="empty-state">No trades yet</div>
+                            }
+                        </div>
+
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="sidebar">
+                        <div className="section-title">Place Order</div>
+
+                        <div className="tab-bar">
+                            <button className={`tab ${side === 'buy' ? 'buy' : ''}`} onClick={() => setSide('buy')}>BUY</button>
+                            <button className={`tab ${side === 'sell' ? 'sell' : ''}`} onClick={() => setSide('sell')}>SELL</button>
+                        </div>
+
+                        <div className="type-row">
+                            <button className={`type-btn ${otype === 'limit' ? 'active' : ''}`} onClick={() => setOtype('limit')}>Limit</button>
+                            <button className={`type-btn ${otype === 'market' ? 'active' : ''}`} onClick={() => setOtype('market')}>Market</button>
+                        </div>
+
+                        {otype === 'limit' && (
+                            <div className="form-group">
+                                <label className="form-label">Price (USDT)</label>
+                                <input className="form-input" type="number" placeholder="50000" value={price} onChange={e => setPrice(e.target.value)} />
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label className="form-label">Quantity (BTC)</label>
+                            <input className="form-input" type="number" placeholder="0.5" value={qty} onChange={e => setQty(e.target.value)} />
+                        </div>
+
+                        {otype === 'limit' && price && qty && (
+                            <div className="hint">Total ≈ <span>${fmt(parseFloat(price || 0) * parseFloat(qty || 0))}</span></div>
+                        )}
+
+                        <button
+                            className={`submit-btn ${side}`}
+                            onClick={submitOrder}
+                            disabled={loading || !qty || (otype === 'limit' && !price)}
+                        >
+                            {loading ? 'Submitting…' : `${side.toUpperCase()} ${qty || '0'} BTC`}
+                        </button>
+
+                        {msg && <div className={`fb ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
+
+                        <div className="section-title" style={{ marginTop: 20 }}>My Open Orders</div>
+                        <div className="book-side">
+                            {myOrders.length > 0
+                                ? myOrders.map(o => (
+                                    <div key={o.id} className="open-order-row">
+                                        <span style={{ color: o.side === 'buy' ? '#3fb950' : '#f85149', fontWeight: 600, fontSize: 11, width: 34 }}>
+                                            {o.side.toUpperCase()}
+                                        </span>
+                                        <span>${fmt(o.price)}</span>
+                                        <span className="dim" style={{ marginLeft: 6 }}>{fmt(o.quantity, 4)}</span>
+                                        <button className="cancel-btn" onClick={() => cancelOrder(o.id)}>✕ cancel</button>
+                                    </div>
+                                ))
+                                : <div className="empty-state">No open orders</div>
+                            }
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="footer">
+                        <span>P2P Order Book — Grenache DHT</span>
+                        <span>{connected ? '🟢 Connected' : '🔴 Disconnected'}</span>
+                        {book && <span>Bids: {book.bids?.length || 0} · Asks: {book.asks?.length || 0} · Trades: {trades.length}</span>}
+                    </div>
+                </div>
+            )
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />)
+    </script>
+</body>
+
+</html>

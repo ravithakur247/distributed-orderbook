@@ -1,0 +1,43 @@
+{
+    "grapes": [
+        {
+            "id": "grape_1",
+            "dhtPort": 20001,
+            "announcePort": 30001,
+            "bootstrap": "127.0.0.1:20002"
+        },
+        {
+            "id": "grape_2",
+            "dhtPort": 20002,
+            "announcePort": 40001,
+            "bootstrap": "127.0.0.1:20001"
+        }
+    ],
+    "peers": [
+        {
+            "id": "peer_1",
+            "port": 3001,
+            "uiPort": 8081,
+            "grapeUrl": "http://127.0.0.1:30001"
+        },
+        {
+            "id": "peer_2",
+            "port": 3002,
+            "uiPort": 8082,
+            "grapeUrl": "http://127.0.0.1:30001"
+        },
+        {
+            "id": "peer_3",
+            "port": 3003,
+            "uiPort": 8083,
+            "grapeUrl": "http://127.0.0.1:40001"
+        }
+    ],
+    "orderbook": {
+        "pair": "BTC/USDT",
+        "pricePrecision": 2,
+        "quantityPrecision": 8,
+        "announceInterval": 1000,
+        "serviceName": "orderbook_service"
+    }
+}

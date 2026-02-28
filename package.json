@@ -1,0 +1,35 @@
+{
+  "name": "distributed-orderbook",
+  "version": "1.0.0",
+  "description": "A distributed P2P order book built with Grenache (Bitfinex's DHT microservice framework). Each peer holds its own local order book. Orders are broadcast to all peers via the DHT.",
+  "main": "src/network/Peer.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "grapes": "node scripts/start-grapes.js",
+    "peer:1": "PEER_ID=peer_1 PEER_PORT=3001 UI_PORT=8081 node src/network/Peer.js",
+    "peer:2": "PEER_ID=peer_2 PEER_PORT=3002 UI_PORT=8082 node src/network/Peer.js",
+    "peer:3": "PEER_ID=peer_3 PEER_PORT=3003 UI_PORT=8083 node src/network/Peer.js",
+    "test": "node --test tests/OrderBook.test.js tests/Heap.test.js",
+    "test:watch": "node --test --watch tests/"
+  },
+  "dependencies": {
+    "grenache-nodejs-http": "^1.0.1",
+    "uuid": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ravithakur247/distributed-orderbook.git"
+  },
+  "keywords": [],
+  "author": "Ravi Thakur",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ravithakur247/distributed-orderbook/issues"
+  },
+  "homepage": "https://github.com/ravithakur247/distributed-orderbook#readme"
+}
